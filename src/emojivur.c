@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
         // PDF & Screen have coordianates origin in different places...
         if (cli_args_info.output_given)
         {
-            pshared.cairo_glyphs[i].x -= margin_x;
+            pshared.cairo_glyphs[i].x += (margin_x / 2);
             pshared.cairo_glyphs[i].y += height - (margin_y / 2);
         }
         else
