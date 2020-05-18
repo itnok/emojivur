@@ -1,0 +1,7 @@
+purpose "Lightweight emoji viewer and PDF conversion utility."
+
+# Options
+option "font"   f "Font file used for rendering"               string typestr="FILENAME" required
+option "output" o "PDF file to export result to"               string typestr="FILENAME" optional
+option "pxsize" s "Size in pixels to use to render the emojis" int optional default="64"
+option "text"   t "Text to display"                            string required
