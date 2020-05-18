@@ -57,4 +57,24 @@ typedef struct
     unsigned int glyph_size;      /**< Size in pixels for the glyphs to render */
 } emoji_to_render_t;
 
+struct emojivur_shared_ptrs_temp
+{
+    // Cairo
+    cairo_t *cairo_context;
+    cairo_surface_t *cairo_surface;
+    cairo_font_face_t *cairo_font_face;
+    cairo_glyph_t *cairo_glyphs;
+
+    // HarfBuzz
+    hb_font_t *harfbuzz_font;
+    hb_buffer_t *tmp_buffer;
+
+    // SDL2
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Surface *sdl_surface;
+    SDL_Texture *sdl_texture;
+} emojivur_shared_ptrs_default = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+typedef struct emojivur_shared_ptrs_temp emojivur_shared_ptrs_t;
+
 #endif // EMOJIVUR_H

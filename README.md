@@ -4,7 +4,7 @@
 
 ![screeshot](asset/screenshot.png)
 
-#### _Lightweight emoji viewer and PDF conversion utility_
+### _Lightweight emoji viewer and PDF conversion utility_
 
 Pronounced **uh·mow·jee·vyoo·ur**, `emojivur` is a tool to view how emoji render on the screen _(or in a PDF document)_ with the capability of choosing the emoji font to use and the final size of the rendered glyphs.
 
