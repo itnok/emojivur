@@ -62,11 +62,13 @@
     })
 
 /*!
- * \brief Compact way to check for validity of a pointer and exit in case it is not valid
+ * \brief Clean up all data allocated in a safe way to avoid any memory leak
  *
- * \param ptr       Generic pointer to check
- * \param error_msg Error message to present to the user (default: "")
- * \param exit_code Exit code to use
+ * It is safe to call this function in any case to destroy all resources associated
+ * with the program at any point (e.g. after an error occurs to make sure memory is released
+ * before exiting)
+ *
+ * \param shared_data       Shared data like Cairo, HarfBuzz and SDL specifics
  *
  */
 void emojivur_cleanup(emojivur_shared_ptrs_t *shared_data)
@@ -132,6 +134,18 @@ void emojivur_cleanup(emojivur_shared_ptrs_t *shared_data)
     SDL_Quit();
 }
 
+/*!
+ * \brief Exit the program with an error message and a specified exit code
+ *
+ * After presenting the error message prefixed by "[ERROR]" and folloed by "(exit_code)",
+ * all memory is released and cleaned up in a safe way. At the end of the function the program
+ * will exit with the provided `exit_code`
+ *
+ * \param shared_data       Shared data like Cairo, HarfBuzz and SDL specifics
+ * \param error_msg         Error message to present to the user (default: "")
+ * \param exit_code         Exit code to use (Useful for automated error checking in scripts)
+ *
+ */
 void emojivur_exit(emojivur_shared_ptrs_t *shared_data, char *error_msg, int exit_code)
 {
     printf("[ERROR] %s (%d)", error_msg, exit_code);
@@ -142,9 +156,10 @@ void emojivur_exit(emojivur_shared_ptrs_t *shared_data, char *error_msg, int exi
 /*!
  * \brief Compact way to check for validity of a pointer and exit in case it is not valid
  *
- * \param ptr       Generic pointer to check
- * \param error_msg Error message to present to the user (default: "")
- * \param exit_code Exit code to use
+ * \param shared_data       Shared data like Cairo, HarfBuzz and SDL specifics
+ * \param ptr               Generic pointer to check
+ * \param error_msg         Error message to present to the user (default: "")
+ * \param exit_code         Exit code to use (Useful for automated error checking in scripts)
  *
  */
 void emojivur_ptr_valid_or_exit(emojivur_shared_ptrs_t *shared_data, void *ptr, char *error_msg, int exit_code)
@@ -171,37 +186,157 @@ void emojivur_set_pdf_metadata(cairo_surface_t *cairo_pdf_surface)
 /*!
  * \brief Create a single page PDF document containing all emojis provided on one line
  *
+ * \param shared_data       Shared data like Cairo, HarfBuzz and SDL specifics
  * \param emoji             Configuration for the Cairo surface to create and render
  * \param pdf_filename      File name for the PDF to create
  *
  */
-void emojivur_pdf_output(emoji_to_render_t emoji, char *pdf_filename)
+void emojivur_pdf_output(emojivur_shared_ptrs_t *shared_data, emoji_to_render_t emoji, char *pdf_filename)
 {
     // Creating a cairo PDF Surface (using SDL2 window width & height to size it)
-    cairo_surface_t *cairo_pdf_surface = cairo_pdf_surface_create(
+    shared_data->cairo_surface = cairo_pdf_surface_create(
         pdf_filename,
         emoji.viewport.w,
         emoji.viewport.h);
+    emojivur_ptr_valid_or_exit(shared_data, shared_data->cairo_surface,
+                               "An error occured during Cairo PDF Surface creation!", 1);
 
     // Creating a Cairo context
-    cairo_t *cairo_pdf_context = cairo_create(cairo_pdf_surface);
+    shared_data->cairo_context = cairo_create(shared_data->cairo_surface);
+    emojivur_ptr_valid_or_exit(shared_data, shared_data->cairo_context,
+                               "An error occured during Cairo PDF Context creation!", 1);
 
-    emojivur_set_pdf_metadata(cairo_pdf_surface);
+    emojivur_set_pdf_metadata(shared_data->cairo_surface);
 
-    cairo_set_source_rgba(cairo_pdf_context, 0, 0, 0, 1.0);
-    cairo_set_font_face(cairo_pdf_context, emoji.font_face);
-    cairo_set_font_size(cairo_pdf_context, emoji.glyph_size);
+    cairo_set_source_rgba(shared_data->cairo_context, 0, 0, 0, 1.0);
+    cairo_set_font_face(shared_data->cairo_context, emoji.font_face);
+    cairo_set_font_size(shared_data->cairo_context, emoji.glyph_size);
 
     // Render glyph onto cairo context (which render onto SDL2 surface)
-    cairo_show_glyphs(cairo_pdf_context, emoji.glyphs, emoji.glyph_count);
+    cairo_show_glyphs(shared_data->cairo_context, emoji.glyphs, emoji.glyph_count);
 
     // Flush page to render it and clear the context eventually for following pages
-    cairo_show_page(cairo_pdf_context);
+    cairo_show_page(shared_data->cairo_context);
 
-    // Clean up
-    cairo_surface_flush(cairo_pdf_surface);
-    cairo_surface_destroy(cairo_pdf_surface);
-    cairo_destroy(cairo_pdf_context);
+    // Clean up destroying Cairo & HarfBuzz resources
+    emojivur_cleanup(shared_data);
+}
+
+/*!
+ * \brief Create a window based on SDL2 to display the emojis provided rendered on one line
+ *
+ * \param shared_data       Shared data like Cairo, HarfBuzz and SDL specifics
+ * \param emoji             Configuration for the Cairo surface to create and render
+ *
+ */
+void emojivur_gui(emojivur_shared_ptrs_t *shared_data, emoji_to_render_t emoji)
+{
+    // Draw text in SDL2 with Cairo
+    SDL_WindowFlags videoFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+
+    shared_data->window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                                           emoji.viewport.w, emoji.viewport.h, videoFlags);
+    if (unlikely(!shared_data->window))
+    {
+        char sdl_error_msg[128];
+
+        snprintf(sdl_error_msg, 127, "Window could not be created! SDL2: %s\n", SDL_GetError());
+        emojivur_exit(shared_data, sdl_error_msg, 1);
+    }
+
+    shared_data->renderer = SDL_CreateRenderer(shared_data->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (unlikely(!shared_data->renderer))
+    {
+        char sdl_error_msg[128];
+
+        snprintf(sdl_error_msg, 127, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
+        emojivur_exit(shared_data, sdl_error_msg, 1);
+    }
+
+    // Compute screen resolution
+    // On a HiDPI screen like Apple Retina Displays, renderer size is twice as window size
+    int window_width;
+    int window_height;
+    SDL_GetWindowSize(shared_data->window, &window_width, &window_height);
+
+    int renderer_width;
+    int renderer_height;
+    SDL_GetRendererOutputSize(shared_data->renderer, &renderer_width, &renderer_height);
+
+    int cairo_x_multiplier = renderer_width / window_width;
+    int cairo_y_multiplier = renderer_height / window_height;
+
+    // Create a SDL2 surface for Cairo to render onto
+    shared_data->sdl_surface = SDL_CreateRGBSurface(
+        0,
+        renderer_width,
+        renderer_height,
+        32,
+        0x00ff0000,
+        0x0000ff00,
+        0x000000ff,
+        0);
+    if (unlikely(!shared_data->sdl_surface))
+    {
+        char sdl_error_msg[128];
+
+        snprintf(sdl_error_msg, 127, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
+        emojivur_exit(shared_data, sdl_error_msg, 1);
+    }
+
+    // Get Cairo surface from a SDL2 surface
+    shared_data->cairo_surface = cairo_image_surface_create_for_data(
+        (unsigned char *)shared_data->sdl_surface->pixels,
+        CAIRO_FORMAT_RGB24,
+        shared_data->sdl_surface->w,
+        shared_data->sdl_surface->h,
+        shared_data->sdl_surface->pitch);
+    emojivur_ptr_valid_or_exit(shared_data, shared_data->cairo_surface,
+                               "An error occured during the creation of the Cairo Surface associated with SDL2!", 1);
+
+    // Scale cairo to use screen resolution
+    cairo_surface_set_device_scale(shared_data->cairo_surface, cairo_x_multiplier, cairo_y_multiplier);
+
+    // Get Cairo context from Cairo surface
+    shared_data->cairo_context = cairo_create(shared_data->cairo_surface);
+    emojivur_ptr_valid_or_exit(shared_data, shared_data->cairo_context,
+                               "An error occured during main Cairo Context creation!", 1);
+    cairo_set_source_rgba(shared_data->cairo_context, 0, 0, 0, 1.0);
+    cairo_set_font_face(shared_data->cairo_context, shared_data->cairo_font_face);
+    cairo_set_font_size(shared_data->cairo_context, emoji.glyph_size);
+
+    bool done = false;
+    while (!done)
+    {
+        // Fill background in white
+        SDL_FillRect(shared_data->sdl_surface, NULL, SDL_MapRGB(shared_data->sdl_surface->format, 255, 255, 255));
+
+        // Render glyph onto cairo context (which render onto SDL2 surface)
+        cairo_show_glyphs(shared_data->cairo_context, shared_data->cairo_glyphs, emoji.glyph_count);
+
+        // Render SDL2 surface onto SDL2 renderer
+        shared_data->sdl_texture = SDL_CreateTextureFromSurface(shared_data->renderer, shared_data->sdl_surface);
+        SDL_RenderCopy(shared_data->renderer, shared_data->sdl_texture, 0, 0);
+        SDL_RenderPresent(shared_data->renderer);
+
+        // Quit app on close event
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            switch (event.type)
+            {
+            case SDL_QUIT:
+                done = true;
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+
+    // Clean up destroying Cairo & HarfBuzz resources
+    emojivur_cleanup(shared_data);
 }
 
 //    __  __    _    ___ _   _
@@ -369,128 +504,25 @@ int main(int argc, char *argv[])
         }
     }
 
+    emoji_to_render_t text_to_render =
+        {
+            .viewport = {width, height},
+            .font_face = pshared.cairo_font_face,
+            .glyphs = pshared.cairo_glyphs,
+            .glyph_count = glyph_count,
+            .glyph_size = cli_args_info.pxsize_arg,
+        };
+
     if (cli_args_info.output_given)
     {
-        emoji_to_render_t text_to_render =
-            {
-                .viewport = {width, height},
-                .font_face = pshared.cairo_font_face,
-                .glyphs = pshared.cairo_glyphs,
-                .glyph_count = glyph_count,
-                .glyph_size = cli_args_info.pxsize_arg,
-            };
-        emojivur_pdf_output(text_to_render, cli_args_info.output_arg);
-
-        // Clean up destroying Cairo & HarfBuzz resources
-        emojivur_cleanup(&pshared);
+        emojivur_pdf_output(&pshared, text_to_render, cli_args_info.output_arg);
 
         // When generating a PDF no UI is going to be provided
+        // therefore nothing beyond this point should be executed!
         return 0;
     }
 
-    // Draw text in SDL2 with Cairo
-    SDL_WindowFlags videoFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+    emojivur_gui(&pshared, text_to_render);
 
-    pshared.window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, videoFlags);
-    if (unlikely(!pshared.window))
-    {
-        char sdl_error_msg[128];
-
-        snprintf(sdl_error_msg, 127, "Window could not be created! SDL2: %s\n", SDL_GetError());
-        emojivur_exit(&pshared, sdl_error_msg, 1);
-    }
-
-    pshared.renderer = SDL_CreateRenderer(pshared.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (unlikely(!pshared.renderer))
-    {
-        char sdl_error_msg[128];
-
-        snprintf(sdl_error_msg, 127, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
-        emojivur_exit(&pshared, sdl_error_msg, 1);
-    }
-
-    // Compute screen resolution
-    // On a HiDPI screen like Apple Retina Displays, renderer size is twice as window size
-    int window_width;
-    int window_height;
-    SDL_GetWindowSize(pshared.window, &window_width, &window_height);
-
-    int renderer_width;
-    int renderer_height;
-    SDL_GetRendererOutputSize(pshared.renderer, &renderer_width, &renderer_height);
-
-    int cairo_x_multiplier = renderer_width / window_width;
-    int cairo_y_multiplier = renderer_height / window_height;
-
-    // Create a SDL2 surface for Cairo to render onto
-    pshared.sdl_surface = SDL_CreateRGBSurface(
-        0,
-        renderer_width,
-        renderer_height,
-        32,
-        0x00ff0000,
-        0x0000ff00,
-        0x000000ff,
-        0);
-    if (unlikely(!pshared.sdl_surface))
-    {
-        char sdl_error_msg[128];
-
-        snprintf(sdl_error_msg, 127, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
-        emojivur_exit(&pshared, sdl_error_msg, 1);
-    }
-
-    // Get Cairo surface from a SDL2 surface
-    pshared.cairo_surface = cairo_image_surface_create_for_data(
-        (unsigned char *)pshared.sdl_surface->pixels,
-        CAIRO_FORMAT_RGB24,
-        pshared.sdl_surface->w,
-        pshared.sdl_surface->h,
-        pshared.sdl_surface->pitch);
-    emojivur_ptr_valid_or_exit(&pshared, pshared.cairo_surface,
-                               "An error occured during the creation of the Cairo Surface associated with SDL2!", 1);
-
-    // Scale cairo to use screen resolution
-    cairo_surface_set_device_scale(pshared.cairo_surface, cairo_x_multiplier, cairo_y_multiplier);
-
-    // Get Cairo context from Cairo surface
-    pshared.cairo_context = cairo_create(pshared.cairo_surface);
-    emojivur_ptr_valid_or_exit(&pshared, pshared.cairo_context,
-                               "An error occured during main Cairo Context creation!", 1);
-    cairo_set_source_rgba(pshared.cairo_context, 0, 0, 0, 1.0);
-    cairo_set_font_face(pshared.cairo_context, pshared.cairo_font_face);
-    cairo_set_font_size(pshared.cairo_context, cli_args_info.pxsize_arg);
-
-    bool done = false;
-    while (!done)
-    {
-        // Fill background in white
-        SDL_FillRect(pshared.sdl_surface, NULL, SDL_MapRGB(pshared.sdl_surface->format, 255, 255, 255));
-
-        // Render glyph onto cairo context (which render onto SDL2 surface)
-        cairo_show_glyphs(pshared.cairo_context, pshared.cairo_glyphs, glyph_count);
-
-        // Render SDL2 surface onto SDL2 renderer
-        pshared.sdl_texture = SDL_CreateTextureFromSurface(pshared.renderer, pshared.sdl_surface);
-        SDL_RenderCopy(pshared.renderer, pshared.sdl_texture, 0, 0);
-        SDL_RenderPresent(pshared.renderer);
-
-        // Quit app on close event
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-            case SDL_QUIT:
-                done = true;
-                break;
-
-            default:
-                break;
-            }
-        }
-    }
-
-    emojivur_cleanup(&pshared);
     return 0;
 }
