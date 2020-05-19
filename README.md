@@ -80,3 +80,37 @@ $ cmake ..
 ```
 
 At the end of the build process the executable will be in the `/path/to/emojivur/build/bin/` directory.
+
+### :penguin: Linux
+
+**Debian/Raspbian/Ubuntu:**
+Installing all the dependencies and needed libraries is very easy leveraging the `apt` package manager. To install the dependencies using `apt` run the following commands:
+
+```bash
+$ sudo apt update
+$ sudo apt install --no-install-recommends \
+    build-essential \
+    gengetopt \
+    pkg-config \
+    libcairo2-dev \
+    libharfbuzz-dev \
+    libfreetype6-dev \
+    libsdl2-dev \
+    libsdl2-image-dev
+```
+
+After having cloned this repository to your computer the program can be built following these steps:
+
+```bash
+$ cd /path/to/emojivur
+$ mkdir -p build
+$ cd build
+$ cmake ..
+```
+
+At the end of the build process the executable will be in the `/path/to/emojivur/build/bin/` directory.
+
+
+## :scroll: License
+
+This software is released under the [MIT License](LICENSE).
