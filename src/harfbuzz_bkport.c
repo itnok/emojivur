@@ -20,7 +20,8 @@ hb_blob_create_from_file(const char *file_name)
 {
     /* The following tries to read a file without knowing its size beforehand
      It's used as a fallback for systems without mmap or to read from pipes */
-    unsigned long len = 0 unsigned long allocated = BUFSIZ * 16;
+    unsigned long len = 0;
+    unsigned long allocated = BUFSIZ * 16;
     char *data = (char *)malloc(allocated);
     if (unlikely(!data))
         return hb_blob_get_empty();
