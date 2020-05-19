@@ -35,6 +35,9 @@
 
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ot.h>
+#ifdef HARFBUZZ_IS_OLD
+#include "harfbuzz_bkport.h"
+#endif
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
