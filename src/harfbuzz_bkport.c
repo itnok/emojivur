@@ -3,6 +3,8 @@
 
 #include <harfbuzz/hb.h>
 
+#include "config.h"
+
 /**
  * hb_blob_create_from_file:
  *
