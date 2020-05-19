@@ -81,52 +81,62 @@ void emojivur_cleanup(emojivur_shared_ptrs_t *shared_data)
     if (shared_data->cairo_context)
     {
         cairo_destroy(shared_data->cairo_context);
+        shared_data->cairo_context = NULL;
     }
 
     if (shared_data->cairo_surface)
     {
         cairo_surface_flush(shared_data->cairo_surface);
         cairo_surface_destroy(shared_data->cairo_surface);
+        shared_data->cairo_surface = NULL;
     }
 
     if (shared_data->cairo_font_face)
     {
         cairo_font_face_destroy(shared_data->cairo_font_face);
+        shared_data->cairo_font_face = NULL;
     }
 
     if (shared_data->cairo_glyphs)
     {
         cairo_glyph_free(shared_data->cairo_glyphs);
+        shared_data->cairo_glyphs = NULL;
     }
 
     if (shared_data->harfbuzz_font)
     {
         hb_font_destroy(shared_data->harfbuzz_font);
+        shared_data->harfbuzz_font = NULL;
     }
 
     if (shared_data->tmp_buffer)
     {
         hb_buffer_destroy(shared_data->tmp_buffer);
+        shared_data->tmp_buffer = NULL;
     }
 
     if (shared_data->window)
     {
         SDL_DestroyWindow(shared_data->window);
+        shared_data->window = NULL;
     }
 
     if (shared_data->renderer)
     {
         SDL_DestroyRenderer(shared_data->renderer);
+        shared_data->renderer = NULL;
     }
 
     if (shared_data->sdl_surface)
     {
         SDL_FreeSurface(shared_data->sdl_surface);
+        shared_data->sdl_surface = NULL;
     }
 
     if (shared_data->sdl_texture)
     {
         SDL_DestroyTexture(shared_data->sdl_texture);
+        shared_data->sdl_surface = NULL;
     }
 
     // SDL_Quit is safe to be called on any possibile exit condition
