@@ -149,7 +149,7 @@ void emojivur_exit(emojivur_shared_ptrs_t *shared_data, char *error_msg, int exi
  */
 void emojivur_ptr_valid_or_exit(emojivur_shared_ptrs_t *shared_data, void *ptr, char *error_msg, int exit_code)
 {
-    if (!ptr)
+    if (unlikely(!ptr))
     {
         emojivur_exit(shared_data, error_msg, exit_code);
     }
@@ -215,7 +215,7 @@ void emojivur_pdf_output(emoji_to_render_t emoji, char *pdf_filename)
 int main(int argc, char *argv[])
 {
     struct gengetopt_args_info cli_args_info;
-    if (cmdline_parser(argc, argv, &cli_args_info) != 0)
+    if (unlikely(cmdline_parser(argc, argv, &cli_args_info) != 0))
     {
         return 1;
     }
@@ -226,13 +226,13 @@ int main(int argc, char *argv[])
 
     // Load font using FreeType for Cairo
     FT_Library ft_library;
-    if (FT_Init_FreeType(&ft_library) != 0)
+    if (unlikely(FT_Init_FreeType(&ft_library) != 0))
     {
         emojivur_exit(&pshared,
                       "An error occured during the FreeType library initialization!", 1);
     }
     FT_Face ft_face = NULL;
-    if (FT_New_Face(ft_library, cli_args_info.font_arg, 0, &ft_face) != 0)
+    if (unlikely(FT_New_Face(ft_library, cli_args_info.font_arg, 0, &ft_face) != 0))
     {
         emojivur_exit(&pshared,
                       "An error occured during the FreeType Font Face creation!", 1);
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
     if (!cli_args_info.output_given)
     {
         // Initializing SDL2 makes sense only if not saving output to PDF
-        if (SDL_Init(SDL_INIT_VIDEO) != 0)
+        if (unlikely(SDL_Init(SDL_INIT_VIDEO) != 0))
         {
             char sdl_error_msg[128];
 
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
 
         // Get info about the screen size
         // TODO: What if there are more screens? Here checking only screen 0
-        if (SDL_GetDesktopDisplayMode(0, &dm) != 0)
+        if (unlikely(SDL_GetDesktopDisplayMode(0, &dm) != 0))
         {
             char sdl_error_msg[128];
 
@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
     SDL_WindowFlags videoFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
 
     pshared.window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, videoFlags);
-    if (!pshared.window)
+    if (unlikely(!pshared.window))
     {
         char sdl_error_msg[128];
 
@@ -401,7 +401,7 @@ int main(int argc, char *argv[])
     }
 
     pshared.renderer = SDL_CreateRenderer(pshared.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!pshared.renderer)
+    if (unlikely(!pshared.renderer))
     {
         char sdl_error_msg[128];
 
@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
         0x0000ff00,
         0x000000ff,
         0);
-    if (!pshared.sdl_surface)
+    if (unlikely(!pshared.sdl_surface))
     {
         char sdl_error_msg[128];
 
