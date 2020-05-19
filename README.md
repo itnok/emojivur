@@ -32,6 +32,8 @@ $ emojivur -f "/System/Library/Fonts/Apple Color Emoji.ttc" -t "🍣 ⚰️ 🐟
 
 ## :pushpin: Requirements
 
+List of required packages/libraries as of they were installed on the machines and operating systems used for testing.
+
 **:apple: macOS** _(10.15 Catalina)_
 
 _(development)_
@@ -44,6 +46,27 @@ _(dependencies)_
 - freetype _(v2.10.1)_
 - sdl2 _(v2.0.12)_
 - sdl2_image _(v2.0.5)_
+
+**:penguin: Ubuntu** _(18.04 Bionic Beaver)_
+
+_(development)_
+- build-essential _(v12.4ubuntu1)_
+- gengetopt _(v2.22.6+dfsg0-2)_
+- pkg-config _(v0.29.1-0ubuntu2)_
+- libcairo2-dev _(v1.15.10-2ubuntu0.1)_
+- libharfbuzz-dev _(v1.7.2-1ubuntu1)_
+- libfreetype6-dev _(v2.8.1-2ubuntu2)_
+- libsdl2-dev _(v2.0.8+dfsg1-1ubuntu1.18.04.4)_
+- libsdl2-image-dev _(v2.0.3+dfsg1-1)_
+
+_(dependencies)_
+- libcairo2 _(v1.15.10-2ubuntu0.1)_
+- libharfbuzz-gobject0 _(v1.7.2-1ubuntu1)_
+- libharfbuzz-icu0 _(v1.7.2-1ubuntu1)_
+- libharfbuzz-0b _(v1.7.2-1ubuntu1)_
+- libfreetype6 _(v2.8.1-2ubuntu2)_
+- libsdl2-2.0-0 _(v2.0.8+dfsg1-1ubuntu1.18.04.4)_
+- libsdl2-image-2.0-0 _(v2.0.3+dfsg1-1)_
 
 
 ## :hammer: How to Build
