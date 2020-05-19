@@ -95,6 +95,7 @@ add_gengetopt_files(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/cli_options.ggo)
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SRC})
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_GENGETOPT_FILES)
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} PUBLIC m)
 
 # CAIRO
 if(CAIRO_FOUND)
