@@ -1,0 +1,57 @@
+language: c
+
+os:
+  - osx
+  - linux
+
+arch:
+  - amd64
+  - arm64
+
+compiler:
+  - gcc
+  - clang
+
+osx_image: xcode11.4
+dist: bionic
+addons:
+  apt:
+    packages:
+      - gengetopt
+      - libcairo2-dev
+      - libharfbuzz-dev
+      - libfreetype6-dev
+      - libsdl2-dev
+      - libsdl2-image-dev
+      - fonts-noto-color-emoji
+
+before_install:
+  - >-
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    brew update
+    ;fi
+  - >-
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    brew install
+    gengetopt
+    pkg-config
+    cairo
+    harfbuzz
+    freetype
+    sdl2
+    sdl2_image
+    ; fi
+
+script:
+  - mkdir -p build
+  - cd build
+  - rm -rf ./*
+  - cmake ..
+  - make -j"$(( $(nproc) + 1 ))"
+  - >-
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    export EMOJI_FONT="/System/Library/Fonts/Apple Color Emoji.ttc"
+    ; else
+    export EMOJI_FONT="/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+    ; fi
+  - bin/emojivur -f "${EMOJI_FONT}" -s 256 -t "$(printf '\xf0\x9f\x8d\xa3 \xe2\x9a\xb0 \xf0\x9f\x90\x9f')" -o "s-kills-tuna.pdf"
